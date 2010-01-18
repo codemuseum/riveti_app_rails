@@ -1,0 +1,10 @@
+<%% # stylesheets 'my-riveti_app' %>
+<%% # javascripts 'my-riveti_app' %>
+
+<% for attribute in attributes -%>
+<p>
+  <b><%= attribute.column.human_name %>:</b>
+  <%%=h @<%= singular_name %>.<%= attribute.name %> %>
+</p>
+
+<% end -%>
