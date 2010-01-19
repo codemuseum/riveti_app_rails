@@ -13,129 +13,38 @@ module RivetiObjectMethods
   
   def self.included(klass)
     unless klass.included_modules.include?(InstanceMethods)
-      klass.send :alias_method, :tsom_original_to_json, :to_json
-      
       klass.extend ClassMethods
       klass.send :include, InstanceMethods
-      
-      klass.send :attr_accessor, :http_request # Stores the request within the page object for accessing
-      klass.send :attr_accessor, :html
-      klass.send :attr_accessor, :alml
-      klass.send :attr_reader, :javascripts
-      klass.send :attr_reader, :stylesheets
-      klass.send :attr_accessor, :site_uid # Stores the request header Site-UID
-      klass.send :attr_protected, :http_request, :html, :alml, :javascripts, :stylesheets, :site_uid, :caching, :caching_scope
-      klass.send :validates_presence_of, :urn
-      klass.send :validates_uniqueness_of, :urn, :case_sensitive => false
     end
   end
   
   module ClassMethods
-    def find_by_param(param)
-      self.find_by_urn(param)
-    end
-    
-    # Similar to find_by_param but sets the variables from the request 
-    def find_from_request(param, request)
-      returning self.find_by_param(param) do |po|
-        po.read_request(request) if po && request
-      end
-    end
-    
-    def caching_default
-      @caching_default || ''
-    end
-    
-    def caching_default=(cd)
-      @caching_default = cd
-    end
-    
-    
-    def caching_scope_default
-      @caching_scope_default || ''
-    end
-    
-    def caching_scope_default=(csd)
-      @caching_scope_default = csd
-    end
+
   end
   
   module InstanceMethods
   
-    # Override me!  This should return a new_record? that has duplicate content.  Used in the 'clone' controller action.
-    def duplicate(new_urn, attr_hash = {})
-      returning clone do |tso|
-        tso.site_uid = self.site_uid
-        tso.attributes = attr_hash
-        tso.urn = new_urn
-      end
-    end
-  
-    def javascripts=(sources_array)
-      @javascripts ||= []
-      @javascripts += sources_array
-    end
+    def remote_headers(params_hash = nil)
+      set_raw_signature
 
-    def stylesheets=(sources_array)
-      @stylesheets ||= []
-      @stylesheets += sources_array
-    end
-  
-    def caching= (c)
-      @caching = c
-    end
-  
-    def caching
-      @caching ? @caching : self.class.caching_default
-    end
-
-    def caching_scope= (cs)
-      @caching_scope = cs
-    end
-
-    def caching_scope
-      @caching_scope ? @caching_scope : self.class.caching_scope_default
-    end
-
-    def read_request(request)
-      self.http_request = request
-      self.site_uid = request.headers[Riveti::Constants.r_site_headers_key]
-    end
-
-    def to_param
-      urn
-    end
-
-    def page_url
-      self.http_request.headers[Riveti::Constants.r_page_url_headers_key]
-    end
-
-    def page_query_parameters
-      return @page_query_parameters if @page_query_parameters
-      
-      query_string = self.http_request.headers[Riveti::Constants.r_page_query_string_key]
-      @page_query_parameters = {}
-
-      (query_string.blank? ? '' : query_string).split('&').collect do |chunk|
-        next if chunk.empty?
-        key, value = chunk.split('=', 2)
-        next if key.empty?
-        @page_query_parameters[CGI.unescape(key).to_sym] = CGI.unescape(value)
-      end
-      @page_query_parameters
+      { Riveti::Constants.r_signature_headers_key => "#{@raw_signature_string}&r_sig=#{CGI::escape(compute_signature)}" }
     end
     
-    def site
-      RivetiObjectMethods::Data.prepare(site_uid.to_s, urn, http_request.headers[Riveti::Constants.r_user_session_headers_key])
-      RivetiObjectMethods::Data
+    def set_raw_signature
+      @raw_signature_string = "r_sig_api_key=#{CGI::escape(ThriveSmart::Constants.config['api_key'])}&r_sig_time=#{CGI::escape(Time.now.to_f.to_s)}"
     end
-  
-    def to_json(options = {})
-      tsom_original_to_json({:methods => [:html, :alml, :caching, :caching_scope, :javascripts, :stylesheets, :errors]}.merge(options))
+
+    def compute_signature
+      Digest::MD5.hexdigest([@raw_signature_string, ThriveSmart::Constants.config['secret_key']].join)
     end
+
+    def signature_header
+      "#{@raw_signature_string}&r_sig=#{CGI::escape(compute_signature)}"
+    end
+    
   end
 
-  class Data < ActiveResource::Base
+  class Event < ActiveResource::Base
     self.site = "#{Riveti::Constants.r_platform_host}/site"
     self.collection_name = 'data' # FIXME when rails knows that 2 pieces of data is still "data" and not "datas"
     self.format = :tson
