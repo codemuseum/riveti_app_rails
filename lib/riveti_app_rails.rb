@@ -1,4 +1,23 @@
+require 'net/http'
+
 module Riveti
+
+  module Api
+    def send_events(events_hash)
+      Net::HTTP.post(URI.parse("#{Riveti::Constants.r_platform_host}/events.json"), "r_api_key=#{ThriveSmart::Constants.config['api_key']}&events=#{events_hash.to_json}", remote_headers)
+    end
+  
+    def remote_headers(params_hash = nil)
+      { Riveti::Constants.r_signature_headers_key => signature_header }
+    end
+
+    def signature_header
+      raw_signature_string = "r_sig_api_key=#{CGI::escape(ThriveSmart::Constants.config['api_key'])}&r_sig_time=#{CGI::escape(Time.now.to_f.to_s)}"
+      computed_signature = Digest::MD5.hexdigest([raw_signature_string, ThriveSmart::Constants.config['secret_key']].join)
+      "#{raw_signature_string}&r_sig=#{CGI::escape(computed_signature)}"
+    end
+  end
+
 
   module Constants    
     mattr_reader :r_platform_host

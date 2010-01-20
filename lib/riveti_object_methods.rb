@@ -1,6 +1,5 @@
 # class Crawl < ActiveRecord::Base
 #   include RivetiObjectMethods
-require 'net/http'
 
 module RivetiObjectMethods
   
@@ -16,27 +15,7 @@ module RivetiObjectMethods
   end
   
   module InstanceMethods
-    def send_events(events_hash)
-      Net::HTTP.post(URI.parse("#{Riveti::Constants.r_platform_host}/events.json"), "r_api_key=#{ThriveSmart::Constants.config['api_key']}&events=#{events_hash.to_json}", remote_headers)
-    end
-  
-    def remote_headers(params_hash = nil)
-      set_raw_signature
 
-      { Riveti::Constants.r_signature_headers_key => "#{@raw_signature_string}&r_sig=#{CGI::escape(compute_signature)}" }
-    end
-    
-    def set_raw_signature
-      @raw_signature_string = "r_sig_api_key=#{CGI::escape(ThriveSmart::Constants.config['api_key'])}&r_sig_time=#{CGI::escape(Time.now.to_f.to_s)}"
-    end
-
-    def compute_signature
-      Digest::MD5.hexdigest([@raw_signature_string, ThriveSmart::Constants.config['secret_key']].join)
-    end
-
-    def signature_header
-      "#{@raw_signature_string}&r_sig=#{CGI::escape(compute_signature)}"
-    end
     
   end
 
