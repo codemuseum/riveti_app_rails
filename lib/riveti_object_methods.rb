@@ -1,14 +1,7 @@
-# In your PageObject and Theme models (ActiveRecord), don't forget to include this!  
-# In addition to providing some helpful methods, it also defines to_param,  
-# find_by_param, and overrides to_json to include HTML
-#
-# class PageObject < ActiveRecord::Base
+# class Crawl < ActiveRecord::Base
 #   include RivetiObjectMethods
-#   self.caching_default = :page_object_update [in :forever, :page_object_update, :any_page_object_update, 'data_update[datetimes]', :never, 'interval[5]'] - intervals reset on page updating
-#
-# You'll probably also want to override the method duplicate(urn)
-# This method is supposed to "deep clone" the thrivesmart object, with a new urn.  
-# It's used when site templates are copied, for example.
+require 'net/http'
+
 module RivetiObjectMethods
   
   def self.included(klass)
@@ -23,6 +16,9 @@ module RivetiObjectMethods
   end
   
   module InstanceMethods
+    def send_events(events_hash)
+      Net::HTTP.post(URI.parse("#{Riveti::Constants.r_platform_host}/events.json"), "r_api_key=#{ThriveSmart::Constants.config['api_key']}&events=#{events_hash.to_json}", remote_headers)
+    end
   
     def remote_headers(params_hash = nil)
       set_raw_signature
