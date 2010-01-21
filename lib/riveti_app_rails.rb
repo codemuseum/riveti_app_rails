@@ -12,6 +12,10 @@ module Riveti
       send_objects('videos', videos_hash)
     end
     
+    def self.send_movies(movies_hash)
+      send_objects('movies', movies_hash)
+    end
+    
     def self.send_objects(plural_object_name, objects_hash)
       url = URI.parse(Riveti::Constants.r_platform_host)
       res = Net::HTTP.start(url.host, url.port) {|http|
@@ -25,7 +29,6 @@ module Riveti
       end
     end
     
-
     def self.remote_headers(params_hash = nil)
       { Riveti::Constants.r_signature_headers_key => signature_header }
     end
