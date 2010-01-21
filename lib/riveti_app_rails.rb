@@ -3,17 +3,28 @@ require 'net/http'
 module Riveti
 
   module Api
-    def send_events(events_hash)
-      Net::HTTP.post(URI.parse("#{Riveti::Constants.r_platform_host}/events.json"), "r_api_key=#{ThriveSmart::Constants.config['api_key']}&events=#{events_hash.to_json}", remote_headers)
+    def self.send_events(events_hash)
+      # Net::HTTP.post(URI.parse("#{Riveti::Constants.r_platform_host}/events.json"), "r_api_key=#{Riveti::Constants.config['api_key']}&events=#{events_hash.to_json}", remote_headers)
+
+      url = URI.parse(Riveti::Constants.r_platform_host)
+      res = Net::HTTP.start(url.host, url.port) {|http|
+        http.post('/events/bulk_create.json', "r_api_key=#{CGI::escape(Riveti::Constants.config['api_key'])}&events=#{CGI::escape(events_hash.to_json)}", remote_headers)
+      }
+      case res
+      when Net::HTTPSuccess, Net::HTTPRedirection
+        return true
+      else
+        res.error!
+      end
     end
-  
-    def remote_headers(params_hash = nil)
+
+    def self.remote_headers(params_hash = nil)
       { Riveti::Constants.r_signature_headers_key => signature_header }
     end
 
-    def signature_header
-      raw_signature_string = "r_sig_api_key=#{CGI::escape(ThriveSmart::Constants.config['api_key'])}&r_sig_time=#{CGI::escape(Time.now.to_f.to_s)}"
-      computed_signature = Digest::MD5.hexdigest([raw_signature_string, ThriveSmart::Constants.config['secret_key']].join)
+    def self.signature_header
+      raw_signature_string = "r_sig_api_key=#{CGI::escape(Riveti::Constants.config['api_key'])}&r_sig_time=#{CGI::escape(Time.now.to_f.to_s)}"
+      computed_signature = Digest::MD5.hexdigest([raw_signature_string, Riveti::Constants.config['secret_key']].join)
       "#{raw_signature_string}&r_sig=#{CGI::escape(computed_signature)}"
     end
   end
@@ -30,7 +41,7 @@ module Riveti
     @@r_signature_headers_key = 'R-Signature'
     mattr_reader :r_max_signature_age
     @@r_max_signature_age = 45.minutes
-    
+
     @@config = nil
     def self.config
       if @@config.nil?
@@ -39,7 +50,7 @@ module Riveti
       @@config
     end
   end
-  
+
   class IncorrectSignature < StandardError; end
   class SignatureTooOld < StandardError; end
 end
