@@ -3,12 +3,19 @@ require 'net/http'
 module Riveti
 
   module Api
+    
     def self.send_events(events_hash)
-      # Net::HTTP.post(URI.parse("#{Riveti::Constants.r_platform_host}/events.json"), "r_api_key=#{Riveti::Constants.config['api_key']}&events=#{events_hash.to_json}", remote_headers)
-
+      send_objects('events', events_hash)
+    end
+    
+    def self.send_videos(videos_hash)
+      send_objects('videos', videos_hash)
+    end
+    
+    def self.send_objects(plural_object_name, objects_hash)
       url = URI.parse(Riveti::Constants.r_platform_host)
       res = Net::HTTP.start(url.host, url.port) {|http|
-        http.post('/events/bulk_create.json', "r_api_key=#{CGI::escape(Riveti::Constants.config['api_key'])}&events=#{CGI::escape(events_hash.to_json)}", remote_headers)
+        http.post("/#{plural_object_name}/bulk_create.json", "r_api_key=#{CGI::escape(Riveti::Constants.config['api_key'])}&#{plural_object_name}=#{CGI::escape(objects_hash.to_json)}", remote_headers)
       }
       case res
       when Net::HTTPSuccess, Net::HTTPRedirection
@@ -17,6 +24,7 @@ module Riveti
         res.error!
       end
     end
+    
 
     def self.remote_headers(params_hash = nil)
       { Riveti::Constants.r_signature_headers_key => signature_header }
