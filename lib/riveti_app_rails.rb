@@ -16,6 +16,10 @@ module Riveti
       send_objects('movies', movies_hash)
     end
     
+    def self.send_songs(songs_hash)
+      send_objects('songs', songs_hash)
+    end
+    
     def self.send_objects(plural_object_name, objects_hash)
       url = URI.parse(Riveti::Constants.r_platform_host)
       res = Net::HTTP.start(url.host, url.port) {|http|
