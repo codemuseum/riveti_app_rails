@@ -24,6 +24,10 @@ module Riveti
       send_objects('games', games_hash)
     end
     
+    def self.send_discounts(discounts_hash)
+      send_objects('discounts', discounts_hash)
+    end
+    
     def self.send_objects(plural_object_name, objects_hash)
       url = URI.parse(Riveti::Constants.r_platform_host)
       res = Net::HTTP.start(url.host, url.port) {|http|
